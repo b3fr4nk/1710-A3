@@ -55,9 +55,21 @@ def compliments():
 @app.route('/compliments_results')
 def compliments_results():
     """Show the user some compliments."""
+
     context = {
-        # TODO: Enter your context variables here.
+        "users_name":request.args.get("users_name"),
+        "wants_compliments":request.args.get("wants_compliments"),
     }
+
+    wants_compliments = request.args.get("wants_compliments")
+    if wants_compliments != "no":
+        compliments_to_give = []
+        for i in range(int(request.args.get("num_compliments"))):
+            random_compliment_i = random.randrange(0, len(list_of_compliments))
+            compliments_to_give.append(list_of_compliments[random_compliment_i])
+        context["compliments"] = compliments_to_give
+
+    
 
     return render_template('compliments_results.html', **context)
 
@@ -79,12 +91,17 @@ def animal_facts():
     """Show a form to choose an animal and receive facts."""
 
     # TODO: Collect the form data and save as variables
+    choice = request.args.get("animal")
 
     context = {
-        # TODO: Enter your context variables here for:
-        # - the list of all animals (get from animal_to_fact)
-        # - the chosen animal fact (may be None if the user hasn't filled out the form yet)
+        "animals":animal_to_fact,
     }
+
+    if choice != None:
+        fact = animal_to_fact[choice]
+        context["fact"] = fact
+
+    
     return render_template('animal_facts.html', **context)
 
 
@@ -135,22 +152,23 @@ def image_filter():
         # TODO: Get the user's chosen filter type (whichever one they chose in the form) and save
         # as a variable
         # HINT: remember that we're working with a POST route here so which requests function would you use?
-        filter_type = ''
+        filter_type = request.form.get("filter_type")
         
         # Get the image file submitted by the user
         image = request.files.get('users_image')
 
         # TODO: call `save_image()` on the image & the user's chosen filter type, save the returned
         # value as the new file path
+        image_path = save_image(image, filter_type)
 
         # TODO: Call `apply_filter()` on the file path & filter type
+        apply_filter(image_path, filter_type)
 
         image_url = f'./static/images/{image.filename}'
 
         context = {
-            # TODO: Add context variables here for:
-            # - The full list of filter types
-            # - The image URL
+            "filters":filter_types_dict,
+            "image":image_url
         }
 
         return render_template('image_filter.html', **context)
@@ -158,6 +176,7 @@ def image_filter():
     else: # if it's a GET request
         context = {
             # TODO: Add context variable here for the full list of filter types
+            "filters":filter_types_dict
         }
         return render_template('image_filter.html', **context)
 
@@ -178,7 +197,7 @@ API_KEY with a value that is the api key for your account. """
 API_KEY = os.getenv('API_KEY')
 print(API_KEY)
 
-TENOR_URL = 'https://api.tenor.com/v1/search'
+TENOR_URL = 'https://api.tenor.com/v1/search?'
 pp = PrettyPrinter(indent=4)
 
 @app.route('/gif_search', methods=['GET', 'POST'])
@@ -188,6 +207,9 @@ def gif_search():
         # TODO: Get the search query & number of GIFs requested by the user, store each as a 
         # variable
 
+        search_query = request.form.get("search_query")
+        num_gifs = request.form.get("quantity")
+
         response = requests.get(
             TENOR_URL,
             {
@@ -195,9 +217,13 @@ def gif_search():
                 # - 'q': the search query
                 # - 'key': the API key (defined above)
                 # - 'limit': the number of GIFs requested
+                'q':search_query,
+                'key':API_KEY,
+                # 'limit':num_gifs
             })
 
         gifs = json.loads(response.content).get('results')
+        print(response)
 
         context = {
             'gifs': gifs
